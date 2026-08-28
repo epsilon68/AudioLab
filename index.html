@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Analogique → Numérique</title>
+    <style>
+        :root {
+            --bg: #1e1e2f;
+            --panel: #2a2a40;
+            --text: #e0e0e0;
+            --accent: #4fc3f7;
+            --analog: #ffb74d;
+            --digital: #81c784;
+            --error: #e57373;
+            --border: #444;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 10px;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+        }
+        h1 {
+            font-size: 1.4rem;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+        }
+        .canvas-container {
+            flex: 1 1 600px;
+            min-width: 280px;
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: auto;
+            background: #111;
+            border-radius: 8px;
+            cursor: crosshair;
+            touch-action: none;
+        }
+        .legend {
+            flex: 0 0 200px;
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-self: flex-start;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+        .legend-item:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .legend-color {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        .legend-text {
+            font-size: 0.9rem;
+            color: var(--text);
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+        .legend-icon {
+            margin-left: auto;
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        .controls {
+            width: 100%;
+            max-width: 1000px;
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+        .control-group label {
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .control-group label span {
+            font-weight: bold;
+            color: var(--accent);
+        }
+        .clickable-term {
+            color: var(--accent);
+            cursor: pointer;
+            text-decoration: underline dotted;
+            text-underline-offset: 3px;
+        }
+        .clickable-term:hover {
+            color: #fff;
+        }
+        input[type="range"] {
+            width: 100%;
+            height: 40px;
+            -webkit-appearance: none;
+            background: transparent;
+            margin-top: 5px;
+        }
+        input[type="range"]::-webkit-slider-runnable-track {
+            height: 8px;
+            background: #444;
+            border-radius: 4px;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-top: -10px;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        input[type="range"]::-moz-range-track {
+            height: 8px;
+            background: #444;
+            border-radius: 4px;
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--accent);
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .checkbox-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .checkbox-option input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent);
+            margin: 0;
+        }
+        .checkbox-option label {
+            margin: 0;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .audio-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-top: 5px;
+        }
+        .transpose-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .transpose-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .transpose-option input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+        .volume-group {
+            flex: 1;
+            min-width: 150px;
+        }
+        .volume-group label {
+            font-size: 0.9rem;
+        }
+        .listen-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 5px;
+        }
+        .listen-btn {
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: background 0.2s, transform 0.1s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            min-width: 200px;
+        }
+        .listen-btn:active {
+            background: #29b6f6;
+            transform: scale(0.98);
+        }
+        .listen-btn.playing {
+            background: #ffb74d;
+        }
+        .info-text {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            text-align: center;
+            margin-top: 5px;
+        }
+        /* Modale */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .modal {
+            background: var(--panel);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 90%;
+            width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            position: relative;
+            color: var(--text);
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.5rem;
+            cursor: pointer;
+            line-height: 1;
+        }
+        .modal h2 {
+            color: var(--accent);
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+        .modal p, .modal ul {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+        .modal ul {
+            padding-left: 20px;
+        }
+        @media (max-width: 800px) {
+            .legend {
+                flex: 1 1 100%;
+                order: 2;
+            }
+            .canvas-container {
+                flex: 1 1 100%;
+                order: 1;
+            }
+        }
+        @media (min-width: 600px) {
+            h1 { font-size: 2rem; }
+            .controls { padding: 20px; }
+            input[type="range"] { height: 45px; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Conversion Analogique → Numérique</h1>
+
+    <div class="main-container">
+        <div class="canvas-container">
+            <canvas id="signalCanvas" width="800" height="400"></canvas>
+        </div>
+        <div class="legend" id="legend">
+            <div class="legend-item" data-term="analog">
+                <span class="legend-color" style="background: #ffb74d;"></span>
+                <span class="legend-text">Analogique</span>
+                <span class="legend-icon">ℹ️</span>
+            </div>
+            <div class="legend-item" data-term="samples">
+                <span class="legend-color" style="background: #4fc3f7;"></span>
+                <span class="legend-text">Échantillons</span>
+                <span class="legend-icon">ℹ️</span>
+            </div>
+            <div class="legend-item" data-term="digital">
+                <span class="legend-color" style="background: #81c784;"></span>
+                <span class="legend-text">Numérique</span>
+                <span class="legend-icon">ℹ️</span>
+            </div>
+            <div class="legend-item" data-term="error">
+                <span class="legend-color" style="background: #e57373;"></span>
+                <span class="legend-text">Erreur</span>
+                <span class="legend-icon">ℹ️</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <label for="freqSignal">
+                Fréquence du <span class="clickable-term" data-term="analog">signal analogique</span>
+                <span id="freqSignalValue">5 Hz</span>
+            </label>
+            <input type="range" id="freqSignal" min="1" max="20" value="5" step="0.5">
+        </div>
+        <div class="control-group">
+            <label for="amplitude">Amplitude <span id="amplitudeValue">1.0</span></label>
+            <input type="range" id="amplitude" min="0.2" max="2.0" value="1.0" step="0.1">
+        </div>
+        <div class="control-group">
+            <label for="samplingRate">
+                Fréquence d'<span class="clickable-term" data-term="sampling">échantillonnage</span> (Hz)
+                <span id="samplingRateValue">20 Hz</span>
+            </label>
+            <input type="range" id="samplingRate" min="1" max="100" value="20" step="1">
+        </div>
+        <div class="control-group">
+            <label for="bitDepth">
+                <span class="clickable-term" data-term="quantization">Quantification</span> (bits)
+                <span id="bitDepthValue">4 bits</span>
+            </label>
+            <input type="range" id="bitDepth" min="1" max="10" value="4" step="1">
+        </div>
+        <div class="checkbox-group">
+            <div class="checkbox-option">
+                <input type="checkbox" id="showAnalog" checked>
+                <label for="showAnalog">Afficher signal analogique</label>
+            </div>
+            <div class="checkbox-option">
+                <input type="checkbox" id="showSamples" checked>
+                <label for="showSamples">Afficher échantillons</label>
+            </div>
+            <div class="checkbox-option">
+                <input type="checkbox" id="showDigital" checked>
+                <label for="showDigital">Afficher signal numérique</label>
+            </div>
+            <div class="checkbox-option">
+                <input type="checkbox" id="showError" checked>
+                <label for="showError">Afficher erreur de quantification</label>
+            </div>
+        </div>
+
+        <div class="audio-controls">
+            <div class="transpose-group">
+                <span style="font-weight:bold; color:var(--accent);">Transposition :</span>
+                <div class="transpose-option">
+                    <input type="radio" id="transpose100" name="transpose" value="100" checked>
+                    <label for="transpose100">×100</label>
+                </div>
+                <div class="transpose-option">
+                    <input type="radio" id="transpose1000" name="transpose" value="1000">
+                    <label for="transpose1000">×1000</label>
+                </div>
+            </div>
+            <div class="volume-group">
+                <label for="volume">
+                    Volume
+                    <span id="volumePercent">70%</span>
+                    <span id="volumeDb">(gain -3.10 dB)</span>
+                </label>
+                <input type="range" id="volume" min="0" max="1" value="0.7" step="0.01">
+            </div>
+        </div>
+        <div class="listen-buttons">
+            <button class="listen-btn" id="playAnalog">🔊 Écouter analogique</button>
+            <button class="listen-btn" id="playDigital">🔊 Écouter numérique</button>
+        </div>
+        <p class="info-text">
+            Maintenez un bouton pour écouter le signal correspondant. Le son analogique est transposé selon le facteur choisi ; le numérique respecte la fréquence d'échantillonnage réglée.
+        </p>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal" id="modalBox">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('signalCanvas');
+            const ctx = canvas.getContext('2d');
+
+            const freqSignalInput = document.getElementById('freqSignal');
+            const amplitudeInput = document.getElementById('amplitude');
+            const samplingRateInput = document.getElementById('samplingRate');
+            const bitDepthInput = document.getElementById('bitDepth');
+            const showAnalogCheck = document.getElementById('showAnalog');
+            const showSamplesCheck = document.getElementById('showSamples');
+            const showDigitalCheck = document.getElementById('showDigital');
+            const showErrorCheck = document.getElementById('showError');
+            const volumeInput = document.getElementById('volume');
+            const volumePercent = document.getElementById('volumePercent');
+            const volumeDb = document.getElementById('volumeDb');
+            const transposeRadios = document.querySelectorAll('input[name="transpose"]');
+            const playAnalogBtn = document.getElementById('playAnalog');
+            const playDigitalBtn = document.getElementById('playDigital');
+
+            const freqSignalValue = document.getElementById('freqSignalValue');
+            const amplitudeValue = document.getElementById('amplitudeValue');
+            const samplingRateValue = document.getElementById('samplingRateValue');
+            const bitDepthValue = document.getElementById('bitDepthValue');
+
+            let freqSignal = 5;
+            let amplitude = 1.0;
+            let samplingRate = 20;
+            let bitDepth = 4;
+            let volume = 0.7;
+
+            let audioCtx = null;
+            let analogOscillator = null;
+            let analogGainNode = null;
+            let digitalBufferSource = null;
+            let digitalGainNode = null;
+
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            function getTransposeFactor() {
+                for (const radio of transposeRadios) {
+                    if (radio.checked) return parseInt(radio.value);
+                }
+                return 100;
+            }
+
+            function updateLabels() {
+                freqSignalValue.textContent = freqSignal + ' Hz';
+                amplitudeValue.textContent = amplitude.toFixed(1);
+                samplingRateValue.textContent = samplingRate + ' Hz';
+                bitDepthValue.textContent = bitDepth + ' bits';
+
+                const percent = Math.round(volume * 100) + '%';
+                let dbText;
+                if (volume <= 0) {
+                    dbText = '(gain -∞ dB)';
+                } else {
+                    const db = 20 * Math.log10(volume);
+                    dbText = '(gain ' + db.toFixed(2) + ' dB)';
+                }
+                volumePercent.textContent = percent;
+                volumeDb.textContent = dbText;
+            }
+
+            function readControls() {
+                freqSignal = parseFloat(freqSignalInput.value);
+                amplitude = parseFloat(amplitudeInput.value);
+                samplingRate = parseInt(samplingRateInput.value);
+                bitDepth = parseInt(bitDepthInput.value);
+                volume = parseFloat(volumeInput.value);
+                updateLabels();
+                draw();
+            }
+
+            function draw() {
+                const width = canvas.width;
+                const height = canvas.height;
+                ctx.clearRect(0, 0, width, height);
+
+                const marginX = 50;
+                const marginY = 30;
+                const plotWidth = width - 2 * marginX;
+                const plotHeight = height - 2 * marginY;
+
+                const zeroY = marginY + plotHeight / 2;
+
+                ctx.strokeStyle = '#555';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(marginX, zeroY);
+                ctx.lineTo(width - marginX, zeroY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(marginX, marginY);
+                ctx.lineTo(marginX, height - marginY);
+                ctx.stroke();
+
+                ctx.fillStyle = '#aaa';
+                ctx.font = '12px sans-serif';
+                ctx.textAlign = 'center';
+                const duration = 1;
+                for (let t = 0; t <= duration; t += 0.2) {
+                    const x = marginX + t * plotWidth;
+                    ctx.fillText(t.toFixed(1) + 's', x, zeroY + 20);
+                }
+                ctx.textAlign = 'right';
+                for (let a = -amplitude; a <= amplitude; a += amplitude / 2) {
+                    const y = zeroY - (a / amplitude) * (plotHeight / 2);
+                    ctx.fillText(a.toFixed(1), marginX - 10, y + 4);
+                }
+
+                if (showAnalogCheck.checked) {
+                    ctx.strokeStyle = '#ffb74d';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let px = 0; px <= plotWidth; px++) {
+                        const t = px / plotWidth * duration;
+                        const value = amplitude * Math.sin(2 * Math.PI * freqSignal * t);
+                        const x = marginX + px;
+                        const y = zeroY - (value / amplitude) * (plotHeight / 2);
+                        if (px === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                    ctx.stroke();
+                }
+
+                const numSamples = Math.floor(samplingRate * duration);
+                const sampleInterval = duration / numSamples;
+                const quantizationLevels = Math.pow(2, bitDepth);
+                const stepSize = (2 * amplitude) / quantizationLevels;
+
+                const samplePoints = [];
+                const quantizedPoints = [];
+
+                if (showSamplesCheck.checked) {
+                    ctx.fillStyle = '#4fc3f7';
+                    for (let i = 0; i < numSamples; i++) {
+                        const t = i * sampleInterval;
+                        const value = amplitude * Math.sin(2 * Math.PI * freqSignal * t);
+                        const quantizedValue = Math.round(value / stepSize) * stepSize;
+                        samplePoints.push({ t, value });
+                        quantizedPoints.push({ t, value: quantizedValue });
+                        const x = marginX + (t / duration) * plotWidth;
+                        const y = zeroY - (value / amplitude) * (plotHeight / 2);
+                        ctx.beginPath();
+                        ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                } else {
+                    for (let i = 0; i < numSamples; i++) {
+                        const t = i * sampleInterval;
+                        const value = amplitude * Math.sin(2 * Math.PI * freqSignal * t);
+                        const quantizedValue = Math.round(value / stepSize) * stepSize;
+                        samplePoints.push({ t, value });
+                        quantizedPoints.push({ t, value: quantizedValue });
+                    }
+                }
+
+                if (showDigitalCheck.checked && quantizedPoints.length > 0) {
+                    ctx.strokeStyle = '#81c784';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let i = 0; i < quantizedPoints.length; i++) {
+                        const { t, value } = quantizedPoints[i];
+                        const x = marginX + (t / duration) * plotWidth;
+                        const y = zeroY - (value / amplitude) * (plotHeight / 2);
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                        if (i < quantizedPoints.length - 1) {
+                            const nextT = quantizedPoints[i + 1].t;
+                            const nextX = marginX + (nextT / duration) * plotWidth;
+                            ctx.lineTo(nextX, y);
+                            ctx.moveTo(nextX, y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+
+                if (showErrorCheck.checked && samplePoints.length > 0) {
+                    ctx.fillStyle = 'rgba(229, 115, 115, 0.8)';
+                    for (let i = 0; i < samplePoints.length; i++) {
+                        const original = samplePoints[i].value;
+                        const quantized = quantizedPoints[i].value;
+                        const error = original - quantized;
+                        const x = marginX + (samplePoints[i].t / duration) * plotWidth;
+                        const yError = zeroY - (error / amplitude) * (plotHeight / 2);
+                        ctx.beginPath();
+                        ctx.arc(x, yError, 3, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                }
+            }
+
+            function generateDigitalBuffer() {
+                const duration = 1;
+                const sampleRate = audioCtx.sampleRate;
+                const length = Math.floor(sampleRate * duration);
+                const buffer = audioCtx.createBuffer(1, length, sampleRate);
+                const data = buffer.getChannelData(0);
+
+                const quantizationLevels = Math.pow(2, bitDepth);
+                const stepSize = (2 * amplitude) / quantizationLevels;
+
+                const numSamples = Math.floor(samplingRate * duration);
+                const sampleInterval = duration / numSamples;
+
+                for (let i = 0; i < length; i++) {
+                    const t = i / sampleRate;
+                    let idx = Math.floor(t / sampleInterval);
+                    if (idx >= numSamples) idx = numSamples - 1;
+                    const sampleTime = idx * sampleInterval;
+                    const analogValue = amplitude * Math.sin(2 * Math.PI * freqSignal * sampleTime);
+                    const quantizedValue = Math.round(analogValue / stepSize) * stepSize;
+                    data[i] = quantizedValue;
+                }
+                return buffer;
+            }
+
+            playAnalogBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                initAudio();
+                if (analogOscillator) return;
+                const transpose = getTransposeFactor();
+                const frequency = freqSignal * transpose;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = frequency;
+                gain.gain.value = volume;
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                analogOscillator = osc;
+                analogGainNode = gain;
+                playAnalogBtn.classList.add('playing');
+            });
+
+            playAnalogBtn.addEventListener('pointerup', stopAnalog);
+            playAnalogBtn.addEventListener('pointerleave', stopAnalog);
+
+            function stopAnalog() {
+                if (analogOscillator) {
+                    analogOscillator.stop();
+                    analogOscillator.disconnect();
+                    if (analogGainNode) analogGainNode.disconnect();
+                    analogOscillator = null;
+                    analogGainNode = null;
+                }
+                playAnalogBtn.classList.remove('playing');
+            }
+
+            playDigitalBtn.addEventListener('pointerdown', (e) => {
+                e.preventDefault();
+                initAudio();
+                if (digitalBufferSource) return;
+                const buffer = generateDigitalBuffer();
+                const source = audioCtx.createBufferSource();
+                const gain = audioCtx.createGain();
+                source.buffer = buffer;
+                source.loop = true;
+                gain.gain.value = volume;
+                source.connect(gain);
+                gain.connect(audioCtx.destination);
+                source.start();
+                digitalBufferSource = source;
+                digitalGainNode = gain;
+                playDigitalBtn.classList.add('playing');
+            });
+
+            playDigitalBtn.addEventListener('pointerup', stopDigital);
+            playDigitalBtn.addEventListener('pointerleave', stopDigital);
+
+            function stopDigital() {
+                if (digitalBufferSource) {
+                    digitalBufferSource.stop();
+                    digitalBufferSource.disconnect();
+                    if (digitalGainNode) digitalGainNode.disconnect();
+                    digitalBufferSource = null;
+                    digitalGainNode = null;
+                }
+                playDigitalBtn.classList.remove('playing');
+            }
+
+            freqSignalInput.addEventListener('input', readControls);
+            amplitudeInput.addEventListener('input', readControls);
+            samplingRateInput.addEventListener('input', readControls);
+            bitDepthInput.addEventListener('input', readControls);
+            volumeInput.addEventListener('input', readControls);
+            showAnalogCheck.addEventListener('change', draw);
+            showSamplesCheck.addEventListener('change', draw);
+            showDigitalCheck.addEventListener('change', draw);
+            showErrorCheck.addEventListener('change', draw);
+
+            function resizeCanvas() {
+                const container = canvas.parentElement;
+                const containerWidth = container.clientWidth;
+                const aspectRatio = 800 / 400;
+                const displayHeight = containerWidth / aspectRatio;
+                canvas.style.width = containerWidth + 'px';
+                canvas.style.height = displayHeight + 'px';
+                canvas.width = 800;
+                canvas.height = 400;
+                draw();
+            }
+
+            window.addEventListener('resize', resizeCanvas);
+            window.addEventListener('load', () => {
+                updateLabels();
+                resizeCanvas();
+            });
+
+            const modalOverlay = document.getElementById('modalOverlay');
+            const modalContent = document.getElementById('modalContent');
+            const modalClose = document.getElementById('modalClose');
+
+            const explanations = {
+                analog: `
+                    <h2>Signal analogique</h2>
+                    <p>Un signal analogique est une grandeur physique (tension, courant, onde sonore…) qui varie de manière <strong>continue</strong> dans le temps. Il peut prendre une infinité de valeurs entre deux bornes. Dans cette démonstration, nous utilisons une onde sinusoïdale, représentée par la courbe orange.</p>
+                    <p>Vous pouvez modifier sa <strong>fréquence</strong> (nombre de cycles par seconde, en hertz) et son <strong>amplitude</strong> (hauteur maximale).</p>
+                `,
+                sampling: `
+                    <h2>Échantillonnage</h2>
+                    <p>L'échantillonnage consiste à prélever la valeur du signal à des instants réguliers. La <strong>fréquence d'échantillonnage</strong> (en Hz) indique combien d'échantillons sont prélevés chaque seconde.</p>
+                    <p>Les points bleus correspondent aux échantillons prélevés. Si la fréquence d'échantillonnage est trop basse par rapport à la fréquence du signal, on observe un phénomène de <strong>repliement de spectre</strong> (aliasing). Le <strong>théorème de Nyquist-Shannon</strong> stipule qu'il faut échantillonner à une fréquence au moins deux fois supérieure à la fréquence maximale du signal pour pouvoir le reconstruire correctement.</p>
+                `,
+                quantization: `
+                    <h2>Quantification</h2>
+                    <p>La quantification consiste à arrondir chaque échantillon à une valeur discrète parmi un ensemble fini de niveaux. Le nombre de niveaux dépend de la <strong>profondeur de bits</strong> (ou résolution) : avec <strong>n bits</strong>, on dispose de <strong>2<sup>n</sup> niveaux</strong> possibles. Par exemple, 4 bits donnent 16 niveaux, 8 bits en donnent 256.</p>
+                    <p>La différence entre la valeur réelle du signal et la valeur quantifiée est l'<strong>erreur de quantification</strong> (représentée en rouge). Plus le nombre de bits est élevé, plus l'erreur est faible et plus la représentation est fidèle.</p>
+                `,
+                digital: `
+                    <h2>Signal numérique</h2>
+                    <p>Après quantification, les échantillons sont codés en binaire. On obtient alors une suite de nombres discrets. La courbe verte en escalier montre une représentation possible du signal numérique (maintien de la valeur entre deux échantillons). Dans la pratique, le signal numérique est souvent reconstruit avec un filtre passe-bas pour retrouver une forme lisse proche de l'original.</p>
+                `,
+                samples: `
+                    <h2>Échantillons</h2>
+                    <p>Les points bleus sur le graphique représentent les valeurs prélevées du signal analogique à des instants précis, définis par la fréquence d'échantillonnage. Chaque point correspond à un échantillon. C'est la première étape de la conversion analogique-numérique.</p>
+                `,
+                error: `
+                    <h2>Erreur de quantification</h2>
+                    <p>L'erreur de quantification est la différence entre la valeur réelle du signal analogique et la valeur quantifiée (arrondie au niveau le plus proche). Elle est inévitable lors de la conversion. Plus le nombre de bits est grand, plus les niveaux sont nombreux et plus l'erreur diminue. Elle est souvent perçue comme un bruit de quantification.</p>
+                `
+            };
+
+            function openModal(term) {
+                if (explanations[term]) {
+                    modalContent.innerHTML = explanations[term];
+                    modalOverlay.classList.add('active');
+                }
+            }
+
+            function closeModal() {
+                modalOverlay.classList.remove('active');
+            }
+
+            document.querySelectorAll('.legend-item').forEach(item => {
+                item.addEventListener('click', () => openModal(item.dataset.term));
+            });
+            document.querySelectorAll('.clickable-term').forEach(el => {
+                el.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    openModal(el.dataset.term);
+                });
+            });
+            modalClose.addEventListener('click', closeModal);
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) closeModal();
+            });
+        })();
+    </script>
+</body>
+</html>
